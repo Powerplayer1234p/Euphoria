@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Euphoria Chatbot</title>
+    <style>
+        /* Basic styling */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #chat-container {
+            width: 400px;
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h2 {
+            background-color: #075E54;
+            color: white;
+            padding: 15px;
+            margin: 0;
+            text-align: center;
+        }
+
+        #messages {
+            flex: 1;
+            padding: 15px;
+            background-color: #e5ddd5;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 10px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .user {
+            background-color: #DCF8C6;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+            text-align: right;
+        }
+
+        .bot {
+            background-color: #fff;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            text-align: left;
+        }
+
+        #user-input-container {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-top: 1px solid #ccc;
+            background-color: #f0f0f0;
+        }
+
+        #user-input {
+            flex: 1;
+            border: none;
+            padding: 10px;
+            border-radius: 20px;
+            background-color: #fff;
+            box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.1);
+            margin-right: 10px;
+        }
+
+        #send-btn, #mic-btn {
+            background-color: #25D366;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        #send-btn:hover, #mic-btn:hover {
+            background-color: #128C7E;
+        }
+
+        #user-input:focus {
+            outline: none;
+        }
+
+        /* Ensure the chat window auto-scrolls */
+        #messages {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <h2>Euphoria Chatbot</h2>
+    <div id="messages">
+        <!-- Chat messages will appear here -->
+    </div>
+    <div id="user-input-container">
+        <input type="text" id="user-input" placeholder="Type your message here..." />
+        <button id="send-btn">Send</button>
+        <button id="mic-btn">&#127908;</button> <!-- Microphone button -->
+    </div>
+</div>
+
+<script>
+    const sendBtn = document.getElementById('send-btn');
+    const micBtn = document.getElementById('mic-btn');
+    const userInput = document.getElementById('user-input');
+    const messagesContainer = document.getElementById('messages');
+
+    // Function to add a message to the chat window
+    function addMessage(message, className) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', className);
+        messageDiv.textContent = message;
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Auto-scroll to the bottom
+    }
+
+    // Event listener for the "Send" button
+    sendBtn.addEventListener('click', () => {
+        const userMessage = userInput.value;
+        if (userMessage.trim() !== '') {
+            // Add the user's message to the chat window
+            addMessage(userMessage, 'user');
+
+            // Send the user's message to the server
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: userMessage })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Add the bot's response to the chat window
+                addMessage(data.response, 'bot');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                addMessage("Error: Couldn't get a response from the server.", 'bot');
+            });
+
+            // Clear the input field
+            userInput.value = '';
+        }
+    });
+
+    // Optional: Enable "Enter" key to send the message
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendBtn.click();
+        }
+    });
+
+    // Voice recognition using Web Speech API
+    micBtn.addEventListener('click', () => {
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'en-US';  // Set the language
+
+    recognition.onstart = () => {
+        console.log('Voice recognition started. Speak now.');
+    };
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        console.log('Voice input:', transcript);
+        userInput.value = transcript;  // Fill the text input with voice data
+        sendBtn.click();  // Automatically send the message
+    };
+
+    recognition.onerror = (event) => {
+        console.error('Error during voice recognition:', event.error);
+        addMessage("Error: Couldn't process voice input.", 'bot');
+    };
+
+    // Start listening
+    recognition.start();
+
+    // Stop listening after 5 seconds
+    setTimeout(() => {
+        recognition.stop();
+        console.log('Voice recognition stopped after 5 seconds.');
+    }, 5000);  // 5000 milliseconds = 5 seconds
+});
+
+</script>
+
+</body>
+</html>
